@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+mkdir -p build
+docker-compose down --volumes --remove-orphans
+docker-compose up -d couchbase
+
+sleep 10
+docker-compose exec -T couchbase sh -c \
+'couchbase-cli cluster-init --cluster-username admin --cluster-password password --services="data,index,query" && couchbase-cli bucket-create -c localhost -u admin -p password --enable-flush 1 --bucket-type couchbase --bucket relay_data --bucket-ramsize 100 && sleep 10 && cbq -e couchbase://localhost -u=admin -p=password --script="create primary index on \`relay_data\`"'
+
+
+cat << EOF > ./build/test_env
+    export ENV_NAME=local
+    export COUCHBASE_URL=localhost
+    export COUCHBASE_USER=admin
+    export COUCHBASE_PASSWORD=password
+    export COUCHBASE_BUCKET=relay_data
+EOF
